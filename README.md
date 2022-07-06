@@ -38,3 +38,12 @@ spike ./obj/riscv-pke ./obj/app_helloworld_no_lds
 git commit -a -m "my work on lab2_1 is done."
 ```
 - 有现成的函数，lookup_pa()可以直接返回对应的物理页面地址，加上页内偏移就行了。
+  
+## lab2_2
+```
+git checkout lab2_2_allocatepage
+git merge lab2_1_pagetable -m "continue to work on lab2_2"
+spike ./obj/riscv-pke ./obj/app_naive_malloc
+git commit -a -m "my work on lab2_2 is done."
+```
+- 调用free_page()函数，在free不为0是清零，然后有效位置为0
