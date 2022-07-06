@@ -47,3 +47,12 @@ spike ./obj/riscv-pke ./obj/app_naive_malloc
 git commit -a -m "my work on lab2_2 is done."
 ```
 - 调用free_page()函数，在free不为0是清零，然后有效位置为0
+
+## lab2_3
+```
+git checkout lab2_3_pagefault
+git merge lab2_2_allocatepage -m "continue to work on lab2_3"
+spike ./obj/riscv-pke ./obj/app_sum_sequence
+git commit -a -m "my work on lab2_3 is done."
+```
+- 主要是map_pages()函数的运用，先分配一个物理页，再将虚拟地址映射上去，权限给了读写。
