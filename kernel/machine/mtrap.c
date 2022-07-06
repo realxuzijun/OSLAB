@@ -1,6 +1,7 @@
 #include "kernel/riscv.h"
 #include "kernel/process.h"
 #include "spike_interface/spike_utils.h"
+#include "kernel/elf.h"
 
 static void handle_instruction_access_fault() { panic("Instruction access fault!"); }
 
@@ -44,6 +45,8 @@ void handle_mtrap() {
     case CAUSE_ILLEGAL_INSTRUCTION:
       // TODO (lab1_2): call handle_illegal_instruction to implement illegal instruction
       // interception, and finish lab1_2.
+      uint64 epc = read_csr(mepc);
+      errorline(epc);
       handle_illegal_instruction();
       break;
     case CAUSE_MISALIGNED_LOAD:

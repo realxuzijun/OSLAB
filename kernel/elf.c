@@ -12,7 +12,7 @@ typedef struct elf_info_t {
   spike_file_t *f;
   process *p;
 } elf_info;
-
+debug_data cur;
 //
 // the implementation of allocater. allocates memory space for later segment loading
 //
@@ -43,6 +43,19 @@ elf_status elf_init(elf_ctx *ctx, void *info) {
 
   // check the signature (magic value) of the elf
   if (ctx->ehdr.magic != ELF_MAGIC) return EL_NOTELF;
+   elf_header header = ctx->ehdr;
+  elf_sect_header shstrtab, search;
+  elf_fpread(ctx, &shstrtab, sizeof(shstrtab), header.shentsize * header.shstrndx + header.shoff);
+  char index[shstrtab.size];
+  uint64 offset = header.shoff;
+  elf_fpread(ctx, index, shstrtab.size, shstrtab.offset);
+  for (int i = 0; i < header.shnum; ++i, offset += header.shentsize) {
+    elf_fpread(ctx, &search, sizeof(search), offset);
+    if (strcmp(index + search.name, ".debug_line") == 0) {
+      elf_fpread(ctx, ctx->debug, search.size, search.offset);
+      ctx->debug_lenth = search.size;
+    }
+  }
 
   return EL_OK;
 }
@@ -284,4 +297,36 @@ void load_bincode_from_host_elf(process *p) {
   spike_file_close( info.f );
 
   sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
+
+  make_addr_line(&elfloader, elfloader.debug, elfloader.debug_lenth);
+  cur.dir = p->dir;
+  cur.file = p->file;
+  cur.line = p->line;
+  cur.line_ind = p->line_ind;
+}
+
+
+void errorline(uint64 epc) {
+  int i, offset = 0;
+  for (i = 0; i < cur.line_ind; i++)
+    if (cur.line[i].addr == epc)
+      break;
+  char dir[256], code[128];
+  strcpy(dir, cur.dir[cur.file[cur.line[i].file].dir]);
+  *(dir + strlen(cur.dir[cur.file[cur.line[i].file].dir])) = '/';
+  strcpy(dir + strlen(cur.dir[cur.file[cur.line[i].file].dir]) + 1, cur.file[cur.line[i].file].file);
+  sprint("Runtime error at %s:%d\n", dir, cur.line[i].line);
+
+  spike_file_t *f = spike_file_open(dir, O_RDONLY, 0);
+  for (int j = 0; j < cur.line[i].line; j++) {
+    spike_file_pread(f, code, 128, offset);
+    for (int c = 0; c <= 127; c++)
+      if (code[c] == '\n') {
+        code[c] = '\0';
+        break;
+      }
+    offset += strlen(code);
+    offset++;
+  }
+  sprint("%s\n", code);
 }
