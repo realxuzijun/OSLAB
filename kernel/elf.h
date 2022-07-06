@@ -50,9 +50,34 @@ typedef enum elf_status_t {
 
 } elf_status;
 
+typedef struct elf_section_header_t {
+  uint32 name;
+  uint32 type;
+  uint64 flags;
+  uint64 addr;
+  uint64 offset;
+  uint64 size;
+  uint32 link;
+  uint32 info;
+  uint64 addralign;
+  uint64 entsize;
+} elf_section_header;
+
+typedef struct elf_string_and_symbol_tables {
+  uint32 name;
+  unsigned char info;
+  unsigned char other;
+  uint16 shndx;
+  uint64 value;
+  uint64 size;
+} elf_sym;
+
 typedef struct elf_ctx_t {
   void *info;
   elf_header ehdr;
+  int sym_num;
+  elf_sym sym[32];
+  char str[200];
 } elf_ctx;
 
 elf_status elf_init(elf_ctx *ctx, void *info);

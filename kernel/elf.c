@@ -13,6 +13,7 @@ typedef struct elf_info_t {
   process *p;
 } elf_info;
 
+elf_ctx g_ctx;
 //
 // the implementation of allocater. allocates memory space for later segment loading
 //
@@ -38,11 +39,33 @@ static uint64 elf_fpread(elf_ctx *ctx, void *dest, uint64 nb, uint64 offset) {
 elf_status elf_init(elf_ctx *ctx, void *info) {
   ctx->info = info;
 
+
   // load the elf header
   if (elf_fpread(ctx, &ctx->ehdr, sizeof(ctx->ehdr), 0) != sizeof(ctx->ehdr)) return EL_EIO;
 
   // check the signature (magic value) of the elf
   if (ctx->ehdr.magic != ELF_MAGIC) return EL_NOTELF;
+
+  if (elf_fpread(ctx, &ctx->ehdr, sizeof(ctx->ehdr), 0) != sizeof(ctx->ehdr))
+    return EL_EIO;
+
+  elf_header header = ctx->ehdr;
+  elf_section_header shstrtab, search;
+  elf_fpread(ctx, &shstrtab, sizeof(shstrtab), header.shentsize * header.shstrndx + header.shoff);
+
+  char index[shstrtab.size];
+  uint64 offset = header.shoff;
+  elf_fpread(ctx, index, shstrtab.size, shstrtab.offset);
+
+  for (int i = 0; i < header.shnum; ++i, offset += header.shentsize) {
+    elf_fpread(ctx, &search, sizeof(search), offset);
+    if (strcmp(index + search.name, ".symtab") == 0) {
+      ctx->sym_num = search.size / search.entsize;
+      elf_fpread(ctx, ctx->sym, search.size, search.offset);
+    } else if (strcmp(index + search.name, ".strtab") == 0) {
+      elf_fpread(ctx, ctx->str, search.size, search.offset);
+    }
+  }
 
   return EL_OK;
 }
@@ -137,4 +160,6 @@ void load_bincode_from_host_elf(process *p) {
   spike_file_close( info.f );
 
   sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
+
+  g_ctx = elfloader;
 }

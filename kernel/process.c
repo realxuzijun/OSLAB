@@ -19,6 +19,7 @@
 extern char smode_trap_vector[];
 extern void return_to_user(trapframe*);
 
+
 // current points to the currently running user-mode application.
 process* current = NULL;
 
