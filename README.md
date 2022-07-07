@@ -41,10 +41,10 @@ git commit -a -m "my work on lab2_1 is done."
   
 ## lab2_2
 ```
-git checkout lab2_2_allocatepage
-git merge lab2_1_pagetable -m "continue to work on lab2_2"
+git checkout lab2_challenge1_pagefaults
+git merge lab2_3_pagefault -m "continue to work on lab2_challenge1"
 spike ./obj/riscv-pke ./obj/app_naive_malloc
-git commit -a -m "my work on lab2_2 is done."
+git commit -a -m "my work on lab2_challenge1 is done."
 ```
 - 调用free_page()函数，在free不为0是清零，然后有效位置为0
 
@@ -56,3 +56,12 @@ spike ./obj/riscv-pke ./obj/app_sum_sequence
 git commit -a -m "my work on lab2_3 is done."
 ```
 - 主要是map_pages()函数的运用，先分配一个物理页，再将虚拟地址映射上去，权限给了读写。
+
+## lab_2_c1
+```
+git checkout lab2_challenge1_pagefaults
+git merge lab2_3_pagefault -m "continue to work on lab2_challenge1"
+spike ./obj/riscv-pke ./obj/app_sum_sequence
+git commit -a -m "my work on lab2_3 is done."
+```
+- 其实这个题的思路上一个实验给过，就是判断缺页的地址是否合法，我像文档中一样规定了用户栈空间最大有20个PGSIZE，在小于USER_STACK_TOP大于USER_STACK_TOP - 20*PGSIZE中的逻辑地址都为合法地址，其他的就是不合法。
