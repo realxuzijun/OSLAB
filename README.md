@@ -56,3 +56,14 @@ spike ./obj/riscv-pke ./obj/app_sum_sequence
 git commit -a -m "my work on lab2_3 is done."
 ```
 - 主要是map_pages()函数的运用，先分配一个物理页，再将虚拟地址映射上去，权限给了读写。
+
+## lab2_c2
+```
+git checkout lab2_challenge2_singlepageheap
+git merge lab2_3_pagefault -m "continue to work on lab2_challenge2"
+spike ./obj/riscv-pke ./obj/app_singlepageheap
+git commit -a -m "my work on lab2_challenge2 is done."
+```
+- 本来想着用动态分区的，但是真有点复杂，看代码只要求地址差距不大于512，那就直接固定分区了，分区大小就512
+- 分配策略是，先扫描有没有页有空闲的分区，有就分配给它；如果没有空闲的分区，就新分配一个页，然后把第一个分区分配给它
+- 回收测量是，先找到这个地址分配的页和分区，然后如果已经分配出去了，就回收；然后检查这个页的所有分区，要是都没分配出去，就回收整个页。

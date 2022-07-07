@@ -14,6 +14,25 @@
 #include "vmm.h"
 #include "spike_interface/spike_utils.h"
 
+
+#define PART_SIZE 512
+#define PAGE_NUM 20
+#define PART_NUM (PGSIZE/PART_SIZE)
+
+typedef struct part {
+  uint64 va;
+  bool state;
+} part;
+
+typedef struct page {
+  part part[PART_NUM];
+  bool state;
+  uint64 va;
+} page;
+
+static page page_list[PAGE_NUM];
+static bool initial;
+
 //
 // implement the SYS_user_print syscall
 //
@@ -40,12 +59,39 @@ ssize_t sys_user_exit(uint64 code) {
 // maybe, the simplest implementation of malloc in the world ... added @lab2_2
 //
 uint64 sys_user_allocate_page() {
+  if (initial == FALSE) {
+    initial = TRUE;
+    for (int i = 0; i < PAGE_NUM; i++) {
+      page_list[i].va = g_ufree_page + i * PGSIZE;
+      page_list[i].state = FALSE;
+      for (int j = 0; j < PART_NUM; j++) {
+        page_list[i].part[j].va = page_list[i].va + PART_SIZE * j;;
+        page_list[i].part[j].state = FALSE;
+      }
+    }
+  }
+  for (int i = 0; i < PAGE_NUM; i++) {
+    if (page_list[i].state == TRUE ) {
+      for (int j=0; j< PART_NUM; j++) {
+        if(page_list[i].part[j].state == FALSE){
+          page_list[i].part[j].state == TRUE;
+          return page_list[i].part[j].va;
+        }
+      }
+    }
+  }
   void* pa = alloc_page();
   uint64 va = g_ufree_page;
   g_ufree_page += PGSIZE;
   user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,
          prot_to_type(PROT_WRITE | PROT_READ, 1));
-
+  for (int i = 0; i < PAGE_NUM; i++) {
+    if (page_list[i].va == va) {
+      page_list[i].state = TRUE;
+      page_list[i].part[0].state = TRUE;
+      return va;
+    }
+  }
   return va;
 }
 
@@ -53,7 +99,23 @@ uint64 sys_user_allocate_page() {
 // reclaim a page, indicated by "va". added @lab2_2
 //
 uint64 sys_user_free_page(uint64 va) {
-  user_vm_unmap((pagetable_t)current->pagetable, va, PGSIZE, 1);
+  uint64 check_page = -1;
+  for (int i = 0; i < PAGE_NUM; i++) {
+    for (int j = 0; j < PART_NUM; j++) {
+      if (page_list[i].part[j].va == va && page_list[i].part[j].state == TRUE) {
+        page_list[i].part[j].state = FALSE;
+        check_page = i;
+      }
+    }
+  }
+  if(check_page != -1){
+    for (int i = 0; i < PART_NUM; i++)
+      if (page_list[check_page].state == TRUE) {
+        return 0;
+      }
+    user_vm_unmap((pagetable_t)current->pagetable, page_list[check_page].va, PGSIZE, 1);
+    page_list[check_page].state = FALSE;
+    }
   return 0;
 }
 
