@@ -77,3 +77,11 @@ git commit -a -m "my work on lab3_2 is done."
     - `current->status = READY`将当前进程置为就绪状态（READY）
     - `insert_to_ready_queue( current )`将当前进程加入到就绪队列的队尾
     - `schedule()`转进程调度
+
+## lab3_3
+```
+git checkout lab3_3_rrsched
+git merge lab3_2_yield -m "continue to work on lab3_3"
+spike ./obj/riscv-pke ./obj/app_two_long_loops
+git commit -a -m "my work on lab3_3 is done"
+```
