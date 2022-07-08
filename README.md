@@ -65,3 +65,15 @@ spike ./obj/riscv-pke ./obj/app_naive_fork
 git commit -a -m "my work on lab3_1 is done."
 ```
 - 还是对map_pages()的运用，由于子进程的va和pa与父进程一样，只需要在子进程的页表中再映射一次就行。
+
+## lab3_2
+```
+git checkout lab3_2_yield
+git merge lab3_1_fork -m "continue to work on lab3_2"
+spike ./obj/riscv-pke ./obj/app_yield
+git commit -a -m "my work on lab3_2 is done."
+```
+- 文档说的比较清楚，挨个写代码就行
+    - `current->status = READY`将当前进程置为就绪状态（READY）
+    - `insert_to_ready_queue( current )`将当前进程加入到就绪队列的队尾
+    - `schedule()`转进程调度
