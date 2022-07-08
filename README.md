@@ -56,3 +56,12 @@ spike ./obj/riscv-pke ./obj/app_sum_sequence
 git commit -a -m "my work on lab2_3 is done."
 ```
 - 主要是map_pages()函数的运用，先分配一个物理页，再将虚拟地址映射上去，权限给了读写。
+
+## lab3_1
+```
+git checkout lab3_1_fork
+git merge lab2_3_pagefault -m "continue to work on lab3_1"
+spike ./obj/riscv-pke ./obj/app_naive_fork
+git commit -a -m "my work on lab3_1 is done."
+```
+- 还是对map_pages()的运用，由于子进程的va和pa与父进程一样，只需要在子进程的页表中再映射一次就行。
