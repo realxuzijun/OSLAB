@@ -85,3 +85,4 @@ git merge lab3_2_yield -m "continue to work on lab3_3"
 spike ./obj/riscv-pke ./obj/app_two_long_loops
 git commit -a -m "my work on lab3_3 is done"
 ```
+- 运行时间达到TIME_SLICE_LEN就重新插入就绪序列，然后调度
