@@ -193,7 +193,7 @@ int do_fork( process* parent)
         // address region of child to the physical pages that actually store the code
         // segment of parent process.
         // DO NOT COPY THE PHYSICAL PAGES, JUST MAP THEM.
-        map_pages(child->pagetable, parent->mapped_info[i].va, 1, lookup_pa((pagetable_t)parent->pagetable, parent->mapped_info[i].va),prot_to_type(PROT_WRITE | PROT_READ | PROT_EXEC, 1));
+        map_pages(child->pagetable, parent->mapped_info[i].va, parent->mapped_info[i].npages, lookup_pa((pagetable_t)parent->pagetable, parent->mapped_info[i].va),prot_to_type(PROT_WRITE | PROT_READ | PROT_EXEC, 1));
         sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", lookup_pa((pagetable_t)parent->pagetable, parent->mapped_info[i].va), parent->mapped_info[i].va );
         // after mapping, register the vm region (do not delete codes below!)
         child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
@@ -202,6 +202,15 @@ int do_fork( process* parent)
         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
         child->total_mapped_region++;
         break;
+      case DATA_SEGMENT:
+        child->mapped_info[i].va = parent->mapped_info[i].va;
+        for (int j = 0; j < parent->mapped_info[i].npages; j++) {
+          void *pa = alloc_page();
+          uint64 va = parent->mapped_info[i].va + PGSIZE * j;
+          memcpy(pa, (void *)lookup_pa(parent->pagetable, va), PGSIZE);
+          map_pages(child->pagetable, va, 1, (uint64)pa,prot_to_type(PROT_WRITE | PROT_READ , 1));
+      }
+      break;
     }
   }
 
@@ -212,3 +221,94 @@ int do_fork( process* parent)
 
   return child->pid;
 }
+
+process *wait_queue_head = NULL;
+
+void insert_to_wait_queue(process *proc) {
+  // if the queue is empty in the beginning
+  if (wait_queue_head == NULL) {
+    proc->status = BLOCKED;
+    proc->queue_next = NULL;
+    wait_queue_head = proc;
+    return;
+  }
+
+  // ready queue is not empty
+  process *p;
+  // browse the ready queue to see if proc is already in-queue
+  for (p = wait_queue_head; p->queue_next != NULL; p = p->queue_next)
+    if (p == proc)
+      return; // already in queue
+
+  // p points to the last element of the ready queue
+  if (p == proc)
+    return;
+  p->queue_next = proc;
+  proc->status = BLOCKED;
+  proc->queue_next = NULL;
+
+  return;
+}
+
+int wait(int pid) {
+
+    process *np;
+
+    for (np = procs; np < &procs[NPROC]; np++) {
+      if (np != NULL && np->parent != NULL && np->parent == current && np->pid == pid) {
+        current->status = BLOCKED;
+        current->wait_type = np->pid;
+        insert_to_wait_queue(current);
+        schedule();
+      } else if (np != NULL && np->parent != NULL && np->parent == current ) {
+        current->status = BLOCKED;
+        current->wait_type = -1;
+        insert_to_wait_queue(current);
+        schedule();
+      }
+    }
+  return -1;
+}
+
+
+bool is_waitpid(process *wait_process,process *current){
+  if(wait_process == NULL)
+    return FALSE;
+  if(wait_process->wait_type == -1){
+    if(current->parent == wait_process)
+      return TRUE;
+    else
+      return FALSE;
+  }
+  else{
+    if(wait_process->wait_type == current->pid)
+      return TRUE;
+    else 
+      return FALSE;
+  }
+}
+
+
+void get_process_from_wait_queue(process* current) {
+  if (wait_queue_head == NULL) {
+    return ;
+  }
+  process *wait_process;
+  for(wait_process = wait_queue_head; wait_process != NULL; wait_process = wait_process->queue_next) {
+    if(wait_process == wait_queue_head)
+      if(is_waitpid(wait_process,current)){
+        wait_process->status = READY;
+        insert_to_ready_queue(wait_process);
+        wait_queue_head = wait_process->queue_next;
+      }
+    if(is_waitpid(wait_process->queue_next,current)){
+      wait_process->queue_next->status = READY;
+      insert_to_ready_queue(wait_process->queue_next);
+      wait_process->queue_next = wait_process->queue_next->queue_next;
+
+    }
+
+
+  }
+}
+

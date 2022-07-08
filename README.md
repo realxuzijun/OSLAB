@@ -85,3 +85,18 @@ git merge lab3_2_yield -m "continue to work on lab3_3"
 spike ./obj/riscv-pke ./obj/app_two_long_loops
 git commit -a -m "my work on lab3_3 is done"
 ```
+- 运行时间达到TIME_SLICE_LEN就重新插入就绪序列，然后调度
+
+## lab3_c1
+```
+git checkout lab3_challenge1_wait
+git merge lab3_3_rrsched -m "continue to work on lab3_challenge1"
+spike ./obj/riscv-pke ./obj/app_wait
+git commit -a -m "my work on lab3_challenge1 is done"
+```
+- 先是按照系统调用的模式把wait函数的框架写出来
+- 首先分两种情况
+    - 输入pid为正数，在所有进程中找为该pid的当前进程的子进程，找到后把当前进程阻塞放进等待队列，置wait_type为pid，然后调度
+    - 输入pid为-1，在所有进程中找当前进程的子进程，找到后把当前进程阻塞放进等待队列，置wait_type为-1，然后调度
+- 然后在进程的结束后，再在等待队列里找父进程，满足wait就放进就绪队列
+- 数据段的复制思路类似代码段的复制，只不过页面要重新分配，再把父进程的页面复制过来
