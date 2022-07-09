@@ -18,6 +18,8 @@
 #include "sched.h"
 #include "spike_interface/spike_utils.h"
 
+#define SEM_NUM 20
+
 //Two functions defined in kernel/usertrap.S
 extern char smode_trap_vector[];
 extern void return_to_user(trapframe *, uint64 satp);
@@ -28,13 +30,16 @@ extern char trap_sec_start[];
 
 // process pool. added @lab3_1
 process procs[NPROC];
+process *wait_queue_head = NULL;
 
 // current points to the currently running user-mode application.
 process* current = NULL;
 
 // points to the first free page in our simple heap. added @lab2_2
-uint64 g_ufree_page = USER_FREE_ADDRESS_START;
 
+uint64 g_ufree_page = USER_FREE_ADDRESS_START;
+sem sem_list[SEM_NUM];
+bool initial = FALSE;
 //
 // switch to a user-mode process
 //
@@ -202,6 +207,15 @@ int do_fork( process* parent)
         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
         child->total_mapped_region++;
         break;
+      case DATA_SEGMENT:
+        child->mapped_info[i].va = parent->mapped_info[i].va;
+        for (int j = 0; j < parent->mapped_info[i].npages; j++) {
+          void *pa = alloc_page();
+          uint64 va = parent->mapped_info[i].va + PGSIZE * j;
+          memcpy(pa, (void *)lookup_pa(parent->pagetable, va), PGSIZE);
+          map_pages(child->pagetable, va, 1, (uint64)pa,prot_to_type(PROT_WRITE | PROT_READ , 1));
+        }
+        break;
     }
   }
 
@@ -211,4 +225,78 @@ int do_fork( process* parent)
   insert_to_ready_queue( child );
 
   return child->pid;
+}
+
+
+
+int sem_new(int num){
+  if(initial == FALSE){
+    for(int i=0; i<SEM_NUM; i++){
+      sem_list[i].status = FALSE;
+      initial = TRUE;
+    }
+  }
+  for(int i=0; i<SEM_NUM;i++){
+    if(sem_list[i].status == FALSE){
+      sem_list[i].status = TRUE;
+      sem_list[i].S = num;
+      return i;
+    }
+  }
+  return -1;
+}
+
+void sem_P(int id){
+  sem_list[id].S--;
+  if(sem_list[id].S>=0){
+    return;
+  }
+  else{
+    current->status = BLOCKED;
+    current->block_sem = id;
+    current->queue_next = NULL;
+    if(wait_queue_head == NULL)
+      wait_queue_head = current;
+    process *search;
+    for (search = wait_queue_head; search->queue_next != NULL; search = search->queue_next)
+      if(search == current)
+        schedule();
+    if(search == current)
+      schedule();
+    search->queue_next = current;
+    schedule();
+    return;
+  }
+}
+
+void sem_V(int id){
+  sem_list[id].S++;
+  if(sem_list[id].S>0)
+  {
+    return;
+  }
+
+  else{
+    process *search;
+    search = wait_queue_head;
+    if(search->queue_next == NULL && search->block_sem == id){
+      search->status = READY;
+      insert_to_ready_queue(search);
+      wait_queue_head = NULL;
+    }
+    for (; search->queue_next!= NULL; search = search->queue_next){
+      if(search->block_sem == id && search == wait_queue_head){
+        search->status = READY;
+        wait_queue_head = search->queue_next;
+        insert_to_ready_queue(search);
+        return;
+      }
+      if(search->queue_next->block_sem == id){
+        search->queue_next->status = READY;
+        search->queue_next = search->queue_next->queue_next;
+        insert_to_ready_queue(search->queue_next);
+        return;
+      }
+    }
+  }
 }

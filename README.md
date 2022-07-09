@@ -86,3 +86,15 @@ spike ./obj/riscv-pke ./obj/app_two_long_loops
 git commit -a -m "my work on lab3_3 is done"
 ```
 - 运行时间达到TIME_SLICE_LEN就重新插入就绪序列，然后调度
+
+## lab3_c2
+```
+git checkout lab3_challenge2_semaphore
+git merge lab3_3_rrsched -m "continue to work on lab3_challenge1"
+spike ./obj/riscv-pke ./obj/app_semaphore
+git commit -a -m "my work on lab3_challenge2 is done"
+```
+- 写三个函数sem_new(),sem_P(),sem_V()
+  - sem_new(num):新建一个信号量，num为S值
+  - sem_P(id),S--,如果S>=0,继续；如果S<0，把当前进程扔进等待队列，重新调度；
+  - sem_V(id),S++,如果S>0,继续；如果S<=0，把被该信号阻塞的一个信号扔进就绪队列；

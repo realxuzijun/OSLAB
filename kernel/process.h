@@ -71,8 +71,14 @@ typedef struct process_t {
 
   // accounting. added @lab3_3
   int tick_count;
+
+  int block_sem;
 }process;
 
+typedef struct sem_t {
+  bool status;
+  int S;
+}sem;
 // switch to run user app
 void switch_to(process*);
 
@@ -92,7 +98,9 @@ process* alloc_process();
 int free_process( process* proc );
 // fork a child from parent
 int do_fork(process* parent);
-
+int sem_new(int num);
+void sem_P(int id);
+void sem_V(int id);
 // current running process
 extern process* current;
 
